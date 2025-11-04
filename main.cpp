@@ -8,7 +8,7 @@ using namespace std;
 int main() {
     cout << "Starting Cross-Platform Snake Game..." << endl;
     cout << "Make sure your terminal supports emojis!" << endl;
-    cout << "Starting in 2 seconds..." << endl;
+    cout << "Starting in few seconds..." << endl;
     
     this_thread::sleep_for(chrono::seconds(2));
     
