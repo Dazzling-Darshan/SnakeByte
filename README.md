@@ -9,3 +9,7 @@ A collaborative Snake game built by [Your Names].
 
 ## How to Run
 [Instructions will be added later]
+
+
+## Contributors 
+Darshan and Mayank
