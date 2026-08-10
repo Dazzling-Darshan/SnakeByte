@@ -25,6 +25,8 @@ extern string SNAKE_HEAD_DEAD;
 extern string SNAKE_BODY;
 extern string SNAKE_BODY_DEAD;
 extern string SNAKE_BODY_SHIELD; // New: Shielded snake body
+extern string SNAKE2_HEAD;
+extern string SNAKE2_BODY;
 extern string FOOD_EMOJI;
 extern string SPECIAL_FOOD_EMOJI;
 extern string POISON_FOOD_EMOJI; // New: Poison food emoji

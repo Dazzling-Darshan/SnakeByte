@@ -51,6 +51,8 @@ public:
 class Game {
 private:
     Snake snake;
+    Snake snake2;
+    int score2;
     pair<int, int> food;
     pair<int, int> specialFood;
     pair<int, int> poisonFood; // New: Poison food
@@ -80,6 +82,7 @@ private:
     const int SHIELD_SPAWN_INTERVAL = 45; // Changed: Shield spawn interval to 60 seconds
     pair<int, int> crashPosition;
     bool wallCrash;
+    string loser; // "P1", "P2", or "BOTH"
 
     // Obstacle members
     const int OBSTACLE_DURATION = 10;
