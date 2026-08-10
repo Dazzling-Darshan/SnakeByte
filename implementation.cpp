@@ -22,6 +22,8 @@ string SNAKE_HEAD_DEAD = "💥";
 string SNAKE_BODY = "🟢";
 string SNAKE_BODY_DEAD = "🔴";
 string SNAKE_BODY_SHIELD = "🟣"; // New: Purple body for shield
+string SNAKE2_HEAD = "🐲";
+string SNAKE2_BODY = "🔵";
 string FOOD_EMOJI = "🍎";
 string SPECIAL_FOOD_EMOJI = "🍇";
 string POISON_FOOD_EMOJI = "🍄"; // New: Poison food emoji
@@ -304,10 +306,10 @@ void Snake::adjustShieldStartTime(chrono::steady_clock::duration pauseDuration) 
 }
 
 // Game implementation
-Game::Game() : snake(WIDTH / 4, HEIGHT / 2), score(0), gameOver(false), quit(false), 
+Game::Game() : snake(WIDTH / 4, HEIGHT / 2), snake2(3 * WIDTH / 4, HEIGHT / 2), score(0), score2(0), gameOver(false), quit(false), 
              paused(false), foodEaten(0), specialFoodEaten(0), poisonFoodEaten(0), 
              specialFoodActive(false), poisonFoodActive(false), shieldActive(false),
-             wallCrash(false), obstaclesActive(false), highScore(0) {
+             wallCrash(false), loser(""), obstaclesActive(false), highScore(0) {
     srand(static_cast<unsigned int>(time(0)));
     
     setupConsole();
@@ -324,6 +326,7 @@ Game::Game() : snake(WIDTH / 4, HEIGHT / 2), score(0), gameOver(false), quit(fal
     loadHighScore();
     
     spawnFood();
+    snake2.changeDirection(LEFT);
 }
 
 Game::~Game() {
@@ -399,6 +402,12 @@ void Game::spawnFood() {
                 break;
             }
         }
+        for (const auto& segment : snake2.getBody()) {
+            if (segment.first == food.first && segment.second == food.second) {
+                occupied = true;
+                break;
+            }
+        }
         if (specialFoodActive && food.first == specialFood.first && food.second == specialFood.second) {
             occupied = true;
         }
@@ -423,6 +432,12 @@ void Game::spawnSpecialFood() {
         
         for (const auto& segment : snake.getBody()) {
             if (segment.first == specialFood.first && specialFood.second == specialFood.second) {
+                occupied = true;
+                break;
+            }
+        }
+        for (const auto& segment : snake2.getBody()) {
+            if (segment.first == specialFood.first && segment.second == specialFood.second) {
                 occupied = true;
                 break;
             }
@@ -461,6 +476,12 @@ void Game::spawnPoisonFood() {
                 break;
             }
         }
+        for (const auto& segment : snake2.getBody()) {
+            if (segment.first == poisonFood.first && segment.second == poisonFood.second) {
+                occupied = true;
+                break;
+            }
+        }
         if (poisonFood.first == food.first && poisonFood.second == food.second) {
             occupied = true;
         }
@@ -488,6 +509,12 @@ void Game::spawnShield() {
         
         for (const auto& segment : snake.getBody()) {
             if (segment.first == shield.first && shield.second == shield.second) {
+                occupied = true;
+                break;
+            }
+        }
+        for (const auto& segment : snake2.getBody()) {
+            if (segment.first == shield.first && segment.second == shield.second) {
                 occupied = true;
                 break;
             }
@@ -521,6 +548,12 @@ void Game::spawnObstacles() {
             obs.second = rand() % HEIGHT;
 
             for (const auto& segment : snake.getBody()) {
+                if (segment.first == obs.first && segment.second == obs.second) {
+                    occupied = true;
+                    break;
+                }
+            }
+            for (const auto& segment : snake2.getBody()) {
                 if (segment.first == obs.first && segment.second == obs.second) {
                     occupied = true;
                     break;
@@ -592,6 +625,11 @@ void Game::updateShield() {
             snake.deactivateShield();
         }
     }
+    if (snake2.hasShield()) {
+        if (snake2.getShieldTimeRemaining() <= 0) {
+            snake2.deactivateShield();
+        }
+    }
 }
 
 void Game::updateObstacles() {
@@ -606,7 +644,8 @@ void Game::updateObstacles() {
 }
 
 int Game::getGameSpeed() {
-    int speedReduction = min(snake.getLength() * speedDecrement, baseSpeed - minSpeed);
+    int maxLen = max(snake.getLength(), snake2.getLength());
+    int speedReduction = min(maxLen * speedDecrement, baseSpeed - minSpeed);
     int calculatedSpeed = baseSpeed - speedReduction;
     return max(calculatedSpeed, minSpeed);
 }
@@ -677,6 +716,7 @@ void Game::togglePause() {
         
         // 5. Shield Power-up Active on Snake
         snake.adjustShieldStartTime(pauseDuration);
+        snake2.adjustShieldStartTime(pauseDuration);
         
         // 6. Shield Power-up on map (if it hasn't been picked up)
         if (shieldActive) {
@@ -736,6 +776,13 @@ void Game::draw() {
                         cellContent = SNAKE_HEAD;
                     }
                 }
+                else if (x == snake2.getHead().first && y == snake2.getHead().second) {
+                    if (gameOver) {
+                        cellContent = SNAKE_HEAD_DEAD;
+                    } else {
+                        cellContent = SNAKE2_HEAD;
+                    }
+                }
                 else if (specialFoodActive && x == specialFood.first && y == specialFood.second && !gameOver) {
                     cellContent = SPECIAL_FOOD_EMOJI;
                 }
@@ -749,6 +796,7 @@ void Game::draw() {
                     cellContent = FOOD_EMOJI;
                 }
                 else {
+                    bool foundBody = false;
                     for (size_t i = 1; i < snake.getBody().size(); i++) {
                         if (x == snake.getBody()[i].first && y == snake.getBody()[i].second) {
                             if (gameOver) {
@@ -758,7 +806,20 @@ void Game::draw() {
                             } else {
                                 cellContent = SNAKE_BODY;
                             }
+                            foundBody = true;
                             break;
+                        }
+                    }
+                    if (!foundBody) {
+                        for (size_t i = 1; i < snake2.getBody().size(); i++) {
+                            if (x == snake2.getBody()[i].first && y == snake2.getBody()[i].second) {
+                                if (gameOver) {
+                                    cellContent = SNAKE_BODY_DEAD;
+                                } else {
+                                    cellContent = SNAKE2_BODY;
+                                }
+                                break;
+                            }
                         }
                     }
                 }
@@ -789,14 +850,14 @@ void Game::draw() {
     screen.addToBuffer("             GAME STATISTICS                 \n");
     screen.addToBuffer("----------------------------------------------\n");
     
-    // Score
-    screen.addToBuffer("Score: " + to_string(score) + " 🏆\n");
+    // Scores
+    screen.addToBuffer("P1 Score: " + to_string(score) + " 🏆  P2 Score: " + to_string(score2) + " 🏆\n");
     
     // High Score
     screen.addToBuffer("High Score: " + to_string(highScore) + " ⭐\n");
     
     // Length
-    screen.addToBuffer("Length: " + to_string(snake.getLength()) + " 📏\n");
+    screen.addToBuffer("P1 Len: " + to_string(snake.getLength()) + "  P2 Len: " + to_string(snake2.getLength()) + " 📏\n");
     
     // Speed
     screen.addToBuffer("Speed: " + to_string(getGameSpeed()) + "ms 🚀\n");
@@ -816,14 +877,16 @@ void Game::draw() {
     // Shield status (Combined logic for active shield and spawn timer)
     string shieldStatus;
     if (paused) {
-        if (snake.hasShield() || shieldActive) {
+        if (snake.hasShield() || snake2.hasShield() || shieldActive) {
              shieldStatus = "      PAUSED      "; 
         } else {
              shieldStatus = "      PAUSED      ";
         }
-    } else if (snake.hasShield()) {
+    } else if (snake.hasShield() || snake2.hasShield()) {
         // Snake has active shield
-        shieldStatus = "Active " + to_string(snake.getShieldTimeRemaining()) + " s 🛡️     ";
+        int rem1 = snake.hasShield() ? snake.getShieldTimeRemaining() : 0;
+        int rem2 = snake2.hasShield() ? snake2.getShieldTimeRemaining() : 0;
+        shieldStatus = "Active (P1:" + to_string(rem1) + "s/P2:" + to_string(rem2) + "s) 🛡️     ";
     } else if (shieldActive) {
         // Shield power-up is on the map (Time on map is SHIELD_DURATION)
         auto now = chrono::steady_clock::now();
@@ -852,7 +915,7 @@ void Game::draw() {
     screen.addToBuffer("----------------------------------------------\n");
     
     // Controls
-    screen.addToBuffer("Controls: WASD/Arrows | SPACE: Pause | Q: Quit\n");
+    screen.addToBuffer("P1: Arrow Keys | P2: WASD | SPACE: Pause | Q: Quit\n");
     
     if (paused) {
         screen.addToBuffer("               *** GAME PAUSED ***               \n");
@@ -860,6 +923,13 @@ void Game::draw() {
     
     if (gameOver) {
         screen.addToBuffer("                 💀 GAME OVER! 💀                \n");
+        if (loser == "BOTH") {
+            screen.addToBuffer("        Both players collided simultaneously!     \n");
+        } else if (loser == "P1") {
+            screen.addToBuffer("             Player 1 lost! Player 2 wins!        \n");
+        } else if (loser == "P2") {
+            screen.addToBuffer("             Player 2 lost! Player 1 wins!        \n");
+        }
     }
     
     screen.addToBuffer("==============================================\n");
@@ -871,53 +941,121 @@ void Game::update() {
     if (gameOver || paused) return;
 
     snake.move();
+    snake2.move();
     updateSpecialFood();
     updatePoisonFood(); // New: Update poison food
     updateShield(); // New: Update shield power-up
     updateObstacles();
 
     pair<int, int> head = snake.getHead();
+    pair<int, int> head2 = snake2.getHead();
 
-    // Check Wall Collision (shield doesn't protect from walls)
+    // Check head-to-head collision (simultaneous)
+    if (head.first == head2.first && head.second == head2.second) {
+        gameOver = true;
+        loser = "BOTH";
+        saveHighScore();
+        return;
+    }
+
+    bool p1Dead = false;
+    bool p2Dead = false;
+
+    // --- Player 1 collision checks ---
+    // Wall
     if (head.first < 0 || head.first >= WIDTH || 
         head.second < 0 || head.second >= HEIGHT) {
-        gameOver = true;
+        p1Dead = true;
         wallCrash = true;
-        
-        // Determine crash position for drawing the dead snake head on the wall
         if (head.first < 0) crashPosition = make_pair(-1, head.second);
         else if (head.first >= WIDTH) crashPosition = make_pair(WIDTH, head.second);
         else if (head.second < 0) crashPosition = make_pair(head.first, -1);
         else if (head.second >= HEIGHT) crashPosition = make_pair(head.first, HEIGHT);
-        
-        saveHighScore(); // --- HIGH SCORE ADDITION: Save on game over
-        return;
     }
-
-    // Check Self Collision (skip if shield is active)
-    if (!snake.hasShield()) {
+    // Self collision
+    if (!p1Dead && !snake.hasShield()) {
         for (size_t i = 1; i < snake.getBody().size(); i++) {
             if (head.first == snake.getBody()[i].first && 
                 head.second == snake.getBody()[i].second) {
-                gameOver = true;
-                saveHighScore(); // --- HIGH SCORE ADDITION: Save on game over
-                return;
+                p1Dead = true;
+                break;
             }
         }
     }
-    
-    // Check Obstacle Collision (skip if shield is active)
-    if (obstaclesActive && !snake.hasShield()) {
+    // P1 hits P2 body
+    if (!p1Dead) {
+        for (size_t i = 0; i < snake2.getBody().size(); i++) {
+            if (head.first == snake2.getBody()[i].first && 
+                head.second == snake2.getBody()[i].second) {
+                p1Dead = true;
+                break;
+            }
+        }
+    }
+    // Obstacle collision
+    if (!p1Dead && obstaclesActive && !snake.hasShield()) {
         for (const auto& obs : obstacles) {
             if (head.first == obs.first && head.second == obs.second) {
-                gameOver = true;
-                saveHighScore(); // --- HIGH SCORE ADDITION: Save on game over
-                return;
+                p1Dead = true;
+                break;
             }
         }
     }
 
-    // Check Food consumption
+    // --- Player 2 collision checks ---
+    // Wall
+    if (head2.first < 0 || head2.first >= WIDTH || 
+        head2.second < 0 || head2.second >= HEIGHT) {
+        p2Dead = true;
+    }
+    // Self collision
+    if (!p2Dead && !snake2.hasShield()) {
+        for (size_t i = 1; i < snake2.getBody().size(); i++) {
+            if (head2.first == snake2.getBody()[i].first && 
+                head2.second == snake2.getBody()[i].second) {
+                p2Dead = true;
+                break;
+            }
+        }
+    }
+    // P2 hits P1 body
+    if (!p2Dead) {
+        for (size_t i = 0; i < snake.getBody().size(); i++) {
+            if (head2.first == snake.getBody()[i].first && 
+                head2.second == snake.getBody()[i].second) {
+                p2Dead = true;
+                break;
+            }
+        }
+    }
+    // Obstacle collision
+    if (!p2Dead && obstaclesActive && !snake2.hasShield()) {
+        for (const auto& obs : obstacles) {
+            if (head2.first == obs.first && head2.second == obs.second) {
+                p2Dead = true;
+                break;
+            }
+        }
+    }
+
+    if (p1Dead && p2Dead) {
+        gameOver = true;
+        loser = "BOTH";
+        saveHighScore();
+        return;
+    } else if (p1Dead) {
+        gameOver = true;
+        loser = "P1";
+        saveHighScore();
+        return;
+    } else if (p2Dead) {
+        gameOver = true;
+        loser = "P2";
+        saveHighScore();
+        return;
+    }
+
+    // Check Food consumption - P1
     if (head.first == food.first && head.second == food.second) {
         score += 10;
         snake.setGrow(true, 1);
@@ -932,29 +1070,60 @@ void Game::update() {
             spawnObstacles();
         }
     }
+    // Check Food consumption - P2
+    else if (head2.first == food.first && head2.second == food.second) {
+        score2 += 10;
+        snake2.setGrow(true, 1);
+        foodEaten++;
+        spawnFood();
+        
+        if (foodEaten % 4 == 0) {
+            spawnSpecialFood();
+            spawnPoisonFood();
+        }
+        if (foodEaten % 5 == 0) {
+            spawnObstacles();
+        }
+    }
 
-    // Check Special Food consumption
+    // Check Special Food consumption - P1
     if (specialFoodActive && head.first == specialFood.first && head.second == specialFood.second) {
         score += 30;
         snake.setGrow(true, 3);
         specialFoodActive = false;
         specialFoodEaten++;
     }
+    // Check Special Food consumption - P2
+    else if (specialFoodActive && head2.first == specialFood.first && head2.second == specialFood.second) {
+        score2 += 30;
+        snake2.setGrow(true, 3);
+        specialFoodActive = false;
+        specialFoodEaten++;
+    }
 
-    // New: Check Poison Food consumption
+    // Check Poison Food consumption - P1
     if (poisonFoodActive && head.first == poisonFood.first && head.second == poisonFood.second) {
-        score = max(0, score - 30); // Decrease score, but not below 0
-        
-        // Decrease length by 3 by removing tail segments
+        score = max(0, score - 30);
         snake.shrink(3);
-        
+        poisonFoodActive = false;
+        poisonFoodEaten++;
+    }
+    // Check Poison Food consumption - P2
+    else if (poisonFoodActive && head2.first == poisonFood.first && head2.second == poisonFood.second) {
+        score2 = max(0, score2 - 30);
+        snake2.shrink(3);
         poisonFoodActive = false;
         poisonFoodEaten++;
     }
 
-    // New: Check Shield Power-up consumption
+    // Check Shield Power-up consumption - P1
     if (shieldActive && head.first == shield.first && head.second == shield.second) {
         snake.activateShield();
+        shieldActive = false;
+    }
+    // Check Shield Power-up consumption - P2
+    else if (shieldActive && head2.first == shield.first && head2.second == shield.second) {
+        snake2.activateShield();
         shieldActive = false;
     }
 }
@@ -989,10 +1158,10 @@ void Game::handleInput() {
             }
         } else {
             switch (tolower(ch)) {
-                case 'w': snake.changeDirection(UP); break;
-                case 's': snake.changeDirection(DOWN); break;
-                case 'a': snake.changeDirection(LEFT); break;
-                case 'd': snake.changeDirection(RIGHT); break;
+                case 'w': snake2.changeDirection(UP); break;
+                case 's': snake2.changeDirection(DOWN); break;
+                case 'a': snake2.changeDirection(LEFT); break;
+                case 'd': snake2.changeDirection(RIGHT); break;
                 case ' ': togglePause(); break; // New: Spacebar toggles pause
                 case 'q': quit = true; break;
             }
