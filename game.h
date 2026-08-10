@@ -29,7 +29,7 @@ private:
     chrono::steady_clock::time_point shieldStartTime; // New: Shield timer
 
 public:
-    Snake(int startX, int startY);
+    Snake(int startX, int startY, Direction startDir = RIGHT);
     void changeDirection(Direction newDir);
     void move();
     void setGrow(bool shouldGrow, int amount = 1);
@@ -51,11 +51,14 @@ public:
 class Game {
 private:
     Snake snake;
+    Snake snake2;
     pair<int, int> food;
     pair<int, int> specialFood;
     pair<int, int> poisonFood; // New: Poison food
     pair<int, int> shield; // New: Shield power-up
     int score;
+    int score2;
+    int losingPlayer;
     bool gameOver;
     bool quit;
     bool paused; // New: Pause state
