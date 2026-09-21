@@ -48,8 +48,23 @@ public:
     void adjustShieldStartTime(chrono::steady_clock::duration pauseDuration); 
 };
 
+class IRandom {
+public:
+    virtual ~IRandom() = default;
+    virtual int getRandom(int min, int max) = 0;
+};
+
+class DefaultRandom : public IRandom {
+public:
+    int getRandom(int min, int max) override {
+        return rand() % (max - min + 1) + min;
+    }
+};
+
 class Game {
 private:
+    IRandom* rng;
+    bool ownsRng;
     Snake snake;
     pair<int, int> food;
     pair<int, int> specialFood;
@@ -118,7 +133,7 @@ private:
     int getObstacleTimeRemaining() const;
 
 public:
-    Game();
+    Game(IRandom* customRng = nullptr);
     ~Game();
     void draw();
     void update();
@@ -128,6 +143,8 @@ public:
     bool isPaused() const; // New: Get pause state
     void togglePause(); // MODIFIED: Logic updated to handle timer compensation
     int getGameSpeed();
+    int getScore() const;
+    int getSnakeLength() const;
 
     // --- HIGH SCORE METHODS ---
     // Loads the score from the file
