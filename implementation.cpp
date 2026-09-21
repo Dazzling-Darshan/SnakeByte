@@ -304,10 +304,17 @@ void Snake::adjustShieldStartTime(chrono::steady_clock::duration pauseDuration) 
 }
 
 // Game implementation
-Game::Game() : snake(WIDTH / 4, HEIGHT / 2), score(0), gameOver(false), quit(false), 
+Game::Game(IRandom* customRng) : snake(WIDTH / 4, HEIGHT / 2), score(0), gameOver(false), quit(false), 
              paused(false), foodEaten(0), specialFoodEaten(0), poisonFoodEaten(0), 
              specialFoodActive(false), poisonFoodActive(false), shieldActive(false),
              wallCrash(false), obstaclesActive(false), highScore(0) {
+    if (customRng != nullptr) {
+        rng = customRng;
+        ownsRng = false;
+    } else {
+        rng = new DefaultRandom();
+        ownsRng = true;
+    }
     srand(static_cast<unsigned int>(time(0)));
     
     setupConsole();
@@ -328,6 +335,9 @@ Game::Game() : snake(WIDTH / 4, HEIGHT / 2), score(0), gameOver(false), quit(fal
 
 Game::~Game() {
     screen.showCursor();
+    if (ownsRng) {
+        delete rng;
+    }
 }
 
 // --- HIGH SCORE IMPLEMENTATIONS ---
@@ -390,8 +400,8 @@ void Game::spawnFood() {
     bool occupied;
     do {
         occupied = false;
-        food.first = rand() % (WIDTH - 2) + 1;
-        food.second = rand() % (HEIGHT - 2) + 1;
+        food.first = rng->getRandom(1, WIDTH - 2);
+        food.second = rng->getRandom(1, HEIGHT - 2);
         
         for (const auto& segment : snake.getBody()) {
             if (segment.first == food.first && segment.second == food.second) {
@@ -418,8 +428,8 @@ void Game::spawnSpecialFood() {
     bool occupied;
     do {
         occupied = false;
-        specialFood.first = rand() % (WIDTH - 2) + 1;
-        specialFood.second = rand() % (HEIGHT - 2) + 1;
+        specialFood.first = rng->getRandom(1, WIDTH - 2);
+        specialFood.second = rng->getRandom(1, HEIGHT - 2);
         
         for (const auto& segment : snake.getBody()) {
             if (segment.first == specialFood.first && specialFood.second == specialFood.second) {
@@ -452,8 +462,8 @@ void Game::spawnPoisonFood() {
     bool occupied;
     do {
         occupied = false;
-        poisonFood.first = rand() % (WIDTH - 2) + 1;
-        poisonFood.second = rand() % (HEIGHT - 2) + 1;
+        poisonFood.first = rng->getRandom(1, WIDTH - 2);
+        poisonFood.second = rng->getRandom(1, HEIGHT - 2);
         
         for (const auto& segment : snake.getBody()) {
             if (segment.first == poisonFood.first && poisonFood.second == poisonFood.second) {
@@ -483,8 +493,8 @@ void Game::spawnShield() {
     bool occupied;
     do {
         occupied = false;
-        shield.first = rand() % (WIDTH - 2) + 1;
-        shield.second = rand() % (HEIGHT - 2) + 1;
+        shield.first = rng->getRandom(1, WIDTH - 2);
+        shield.second = rng->getRandom(1, HEIGHT - 2);
         
         for (const auto& segment : snake.getBody()) {
             if (segment.first == shield.first && shield.second == shield.second) {
@@ -517,8 +527,8 @@ void Game::spawnObstacles() {
         pair<int, int> obs;
         do {
             occupied = false;
-            obs.first = rand() % WIDTH;
-            obs.second = rand() % HEIGHT;
+            obs.first = rng->getRandom(0, WIDTH - 1);
+            obs.second = rng->getRandom(0, HEIGHT - 1);
 
             for (const auto& segment : snake.getBody()) {
                 if (segment.first == obs.first && segment.second == obs.second) {
@@ -1006,4 +1016,12 @@ bool Game::isGameOver() const {
 
 bool Game::shouldQuit() const {
     return quit || gameOver;
+}
+
+int Game::getScore() const {
+    return score;
+}
+
+int Game::getSnakeLength() const {
+    return snake.getLength();
 }
